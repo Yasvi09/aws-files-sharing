@@ -1,0 +1,22 @@
+service: aws-s3-lambda
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION}
+  environment:
+    S3_BUCKET: ${env:S3_BUCKET}
+
+functions:
+  generateUploadUrl:
+    handler: handler.generateUploadUrl
+    events:
+      - http:
+          path: upload-url
+          method: post
+  generateExpiringUrl:
+    handler: handler.generateExpiringUrl
+    events:
+      - http:
+          path: expiring-url
+          method: post

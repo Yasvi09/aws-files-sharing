@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Secure File Storage</title>
+    <style>
+        :root {
+            --primary-color: #0066cc;
+            --secondary-color: #f0f2f5;
+            --text-color: #333;
+            --border-color: #ddd;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            color: var(--text-color);
+            line-height: 1.6;
+            background-color: #f9fafb;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .section {
+            background-color: white;
+            border-radius: 5px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .description {
+            margin-bottom: 20px;
+            color: #555;
+        }
+
+        .file-upload {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .file-input-label {
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .file-input {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--secondary-color);
+        }
+
+        .upload-btn {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            align-self: flex-start;
+            transition: background-color 0.2s;
+        }
+
+        .upload-btn:hover {
+            background-color: #0055b3;
+        }
+
+        .files-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .files-table th {
+            text-align: left;
+            padding: 12px 15px;
+            background-color: var(--secondary-color);
+            font-weight: 600;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .files-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .files-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .files-table tr:hover {
+            background-color: #f5f7fa;
+        }
+
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            color: white;
+            margin-right: 5px;
+            transition: opacity 0.2s;
+        }
+
+        .action-btn:hover {
+            opacity: 0.9;
+        }
+
+        .share-btn {
+            background-color: var(--primary-color);
+        }
+
+        .delete-btn {
+            background-color: var(--danger-color);
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .pagination-btn {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        .pagination-btn:hover, .pagination-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 5px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #777;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .expiry-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-label {
+            font-weight: 500;
+        }
+
+        .form-input {
+            padding: 8px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .generate-btn {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .generate-btn:hover {
+            background-color: #0055b3;
+        }
+
+        .url-result {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .url-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .url-display {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--secondary-color);
+            font-family: monospace;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .copy-btn {
+            padding: 10px 15px;
+            background-color: var(--success-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .copy-btn:hover {
+            background-color: #218838;
+        }
+
+        .copy-message {
+            color: var(--success-color);
+            font-size: 0.9rem;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            margin-top: 10px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .section {
+                padding: 15px;
+            }
+            
+            .files-table th, .files-table td {
+                padding: 10px;
+            }
+            
+            .action-btn {
+                padding: 5px 10px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>AWS Secure File Storage</h1>
+        </header>
+        
+        <section class="section">
+            <div class="description">
+                <h2>Secure Cloud File Sharing</h2>
+                <p>Easily upload, manage, and share your files with time-limited access controls. Your files are stored securely in AWS and can be shared with configurable expiration times.</p>
+            </div>
+            
+            <div class="file-upload">
+                <div class="file-input-wrapper">
+                    <label for="file-upload" class="file-input-label">Select File to Upload:</label>
+                    <input type="file" id="file-upload" class="file-input">
+                </div>
+                <button class="upload-btn" id="upload-button">Upload File</button>
+                <p class="error-message" id="upload-error"></p>
+            </div>
+        </section>
+        
+        <section class="section">
+            <h2>Uploaded Files</h2>
+            
+            <table class="files-table">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>File Name</th>
+                        <th>Size</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="files-list">
+                    <!-- File listing will be dynamically populated -->
+                </tbody>
+            </table>
+            
+            <div class="pagination" id="pagination">
+                <!-- Pagination buttons will be dynamically populated -->
+            </div>
+        </section>
+    </div>
+    
+    <!-- Share Modal -->
+    <div class="modal" id="share-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Share File: <span id="share-filename"></span></h3>
+                <button class="close-modal" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="expiry-options">
+                    <div class="form-group">
+                        <label class="form-label">Expiration Date:</label>
+                        <input type="date" id="expiry-date" class="form-input" min="">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Expiration Time:</label>
+                        <input type="time" id="expiry-time" class="form-input">
+                    </div>
+                </div>
+                
+                <button class="generate-btn" id="generate-url-btn">Generate Sharing URL</button>
+                <p class="error-message" id="share-error"></p>
+                
+                <div class="url-result" id="url-result">
+                    <p>Your file is ready to be shared. The link will expire at the specified time.</p>
+                    <div class="url-box">
+                        <div class="url-display" id="share-url"></div>
+                        <button class="copy-btn" id="copy-url-btn">Copy</button>
+                    </div>
+                    <p class="copy-message" id="copy-message">URL copied to clipboard!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // API Configuration
+        const API_CONFIG = {
+            baseUrl: 'https://xhmu6mpzxjm6qedyyzkjj4uilu0limfm.lambda-url.eu-north-1.on.aws', // Replace with your actual API base URL
+            endpoints: {
+                getSignedUrl: '/upload-url',
+                generateShareUrl: '/expiring-url'
+            }
+        };
+        
+        // LocalStorage Keys
+        const STORAGE_KEYS = {
+            FILES: 'aws_secure_files'
+        };
+        
+        // State variables
+        let currentPage = 1;
+        const itemsPerPage = 10;
+        let selectedFileId = null;
+        let selectedFile = null;
+        
+        // DOM Elements
+        const filesList = document.getElementById('files-list');
+        const pagination = document.getElementById('pagination');
+        const shareModal = document.getElementById('share-modal');
+        const closeModal = document.getElementById('close-modal');
+        const shareFilename = document.getElementById('share-filename');
+        const expiryDate = document.getElementById('expiry-date');
+        const expiryTime = document.getElementById('expiry-time');
+        const generateUrlBtn = document.getElementById('generate-url-btn');
+        const urlResult = document.getElementById('url-result');
+        const shareUrl = document.getElementById('share-url');
+        const copyUrlBtn = document.getElementById('copy-url-btn');
+        const copyMessage = document.getElementById('copy-message');
+        const uploadButton = document.getElementById('upload-button');
+        const uploadError = document.getElementById('upload-error');
+        const shareError = document.getElementById('share-error');
+        
+        // Initialize date picker with today's date as minimum
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        expiryDate.min = formattedDate;
+        expiryDate.value = formattedDate;
+        
+        // Set default time (24 hours from now)
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const hours = String(tomorrow.getHours()).padStart(2, '0');
+        const minutes = String(tomorrow.getMinutes()).padStart(2, '0');
+        expiryTime.value = `${hours}:${minutes}`;
+        
+        // Initialize the application
+        function init() {
+            loadFilesFromStorage();
+            renderFiles();
+            renderPagination();
+            setupEventListeners();
+        }
+        
+        // Load files from local storage
+        function loadFilesFromStorage() {
+            const storedFiles = localStorage.getItem(STORAGE_KEYS.FILES);
+            return storedFiles ? JSON.parse(storedFiles) : [];
+        }
+        
+        // Save files to local storage
+        function saveFilesToStorage(files) {
+            localStorage.setItem(STORAGE_KEYS.FILES, JSON.stringify(files));
+        }
+        
+        // Render files based on current page
+        function renderFiles() {
+            filesList.innerHTML = '';
+            
+            const files = loadFilesFromStorage();
+            
+            if (files.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="4" style="text-align: center;">No files uploaded yet.</td>';
+                filesList.appendChild(row);
+                return;
+            }
+            
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedFiles = files.slice(start, end);
+            
+            paginatedFiles.forEach((file, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${start + index + 1}</td>
+                    <td>${file.name}</td>
+                    <td>${file.size}</td>
+                    <td>
+                        <button class="action-btn share-btn" data-id="${file.id}">Share</button>
+                        <button class="action-btn delete-btn" data-id="${file.id}">Delete</button>
+                    </td>
+                `;
+                filesList.appendChild(row);
+            });
+            
+            // Add event listeners to the newly created buttons
+            const shareButtons = document.querySelectorAll('.share-btn');
+            shareButtons.forEach(button => {
+                button.addEventListener('click', handleShareClick);
+            });
+            
+            const deleteButtons = document.querySelectorAll('.delete-btn');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', handleDeleteClick);
+            });
+        }
+        
+        // Render pagination buttons
+        function renderPagination() {
+            pagination.innerHTML = '';
+            
+            const files = loadFilesFromStorage();
+            const totalPages = Math.ceil(files.length / itemsPerPage);
+            
+            if (totalPages <= 1) {
+                return; // No need for pagination if there's only one page
+            }
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'pagination-btn';
+            prevBtn.textContent = '←';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.style.opacity = currentPage === 1 ? '0.5' : '1';
+            prevBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderFiles();
+                    renderPagination();
+                }
+            });
+            pagination.appendChild(prevBtn);
+            
+            // Page buttons
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+                pageBtn.textContent = i;
+                pageBtn.addEventListener('click', () => {
+                    currentPage = i;
+                    renderFiles();
+                    renderPagination();
+                });
+                pagination.appendChild(pageBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'pagination-btn';
+            nextBtn.textContent = '→';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.style.opacity = currentPage === totalPages ? '0.5' : '1';
+            nextBtn.addEventListener('click', () => {
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    renderFiles();
+                    renderPagination();
+                }
+            });
+            pagination.appendChild(nextBtn);
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Close modal
+            closeModal.addEventListener('click', () => {
+                shareModal.style.display = 'none';
+                urlResult.style.display = 'none';
+                shareError.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            window.addEventListener('click', (event) => {
+                if (event.target === shareModal) {
+                    shareModal.style.display = 'none';
+                    urlResult.style.display = 'none';
+                    shareError.style.display = 'none';
+                }
+            });
+            
+            // Generate URL button
+            generateUrlBtn.addEventListener('click', handleGenerateUrl);
+            
+            // Copy URL button
+            copyUrlBtn.addEventListener('click', handleCopyUrl);
+            
+            // Upload button
+            uploadButton.addEventListener('click', handleUpload);
+        }
+        
+        // Handle share button click
+        function handleShareClick(event) {
+            const fileId = event.target.dataset.id;
+            
+            // Find the file in storage
+            const files = loadFilesFromStorage();
+            selectedFile = files.find(file => file.id.toString() === fileId);
+            
+            if (!selectedFile) {
+                alert('File not found.');
+                return;
+            }
+            
+            selectedFileId = fileId;
+            shareFilename.textContent = selectedFile.name;
+            
+            // Show modal
+            shareModal.style.display = 'flex';
+            urlResult.style.display = 'none';
+            copyMessage.style.display = 'none';
+            shareError.style.display = 'none';
+        }
+        
+        // Handle delete button click
+        function handleDeleteClick(event) {
+            const fileId = event.target.dataset.id;
+            
+            // Find the file in storage
+            const files = loadFilesFromStorage();
+            const fileIndex = files.findIndex(file => file.id.toString() === fileId);
+            
+            if (fileIndex === -1) {
+                alert('File not found.');
+                return;
+            }
+            
+            // Confirmation dialog
+            if (confirm(`Are you sure you want to delete ${files[fileIndex].name}?`)) {
+                // Remove the file from storage
+                files.splice(fileIndex, 1);
+                saveFilesToStorage(files);
+                
+                // Re-render the current page
+                // If the current page is now empty (except when it's page 1), go to the previous page
+                const totalPages = Math.ceil(files.length / itemsPerPage);
+                if (currentPage > totalPages && currentPage > 1) {
+                    currentPage--;
+                }
+                
+                renderFiles();
+                renderPagination();
+            }
+        }
+        
+        // Handle generate URL button click
+        async function handleGenerateUrl() {
+            // Get the selected expiry date and time
+            const date = expiryDate.value;
+            const time = expiryTime.value;
+            
+            if (!date || !time) {
+                alert('Please select both expiry date and time.');
+                return;
+            }
+            
+            // Clear previous errors and results
+            shareError.style.display = 'none';
+            urlResult.style.display = 'none';
+            
+            try {
+                // Show loading state
+                generateUrlBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+                generateUrlBtn.disabled = true;
+                
+                // Calculate expiration time in seconds from now until the selected date/time
+                const expiryDateTime = new Date(`${date}T${time}:00`);
+                const currentTime = new Date();
+                const expirationSeconds = Math.floor((expiryDateTime - currentTime) / 1000);
+                
+                if (expirationSeconds <= 0) {
+                    throw new Error("Expiration time must be in the future");
+                }
+                
+                // Prepare the request payload
+                const payload = {
+                    objectId: selectedFile.s3ObjectKey,
+                    expirationTime: expirationSeconds.toString()
+                };
+                
+                // Make API call
+                const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.generateShareUrl}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                // Check for HTTP errors
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                // Parse the response
+                const data = await response.json();
+                
+                // Display the URL
+                shareUrl.textContent = data.downloadUrl;
+                urlResult.style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error generating URL:', error);
+                shareError.textContent = `Failed to generate URL: ${error.message}`;
+                shareError.style.display = 'block';
+                
+            } finally {
+                // Reset button state
+                generateUrlBtn.textContent = 'Generate Sharing URL';
+                generateUrlBtn.disabled = false;
+            }
+        }
+        
+        // Handle copy URL button click
+        function handleCopyUrl() {
+            const url = shareUrl.textContent;
+            
+            // Use the Clipboard API
+            navigator.clipboard.writeText(url).then(() => {
+                copyMessage.style.display = 'block';
+                
+                // Hide the message after 3 seconds
+                setTimeout(() => {
+                    copyMessage.style.display = 'none';
+                }, 3000);
+            }, (err) => {
+                console.error('Failed to copy: ', err);
+                alert('Failed to copy URL to clipboard. Please select and copy manually.');
+            });
+        }
+        
+        // Handle file upload
+        async function handleUpload() {
+            const fileInput = document.getElementById('file-upload');
+            
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a file to upload.');
+                return;
+            }
+            
+            const file = fileInput.files[0];
+            
+            // Clear previous error
+            uploadError.style.display = 'none';
+            
+            try {
+                // Show loading state
+                uploadButton.innerHTML = '<span class="loading-spinner"></span> Uploading...';
+                uploadButton.disabled = true;
+                
+                // Step 1: Request a signed URL from the backend
+                const signedUrlResponse = await getSignedUrl(file);
+
+                console.log(signedUrlResponse);
+                
+                // Step 2: Upload the file to S3 using the signed URL
+                await uploadFileToS3(signedUrlResponse.url, file);
+                // return;
+                
+                // Step 3: Save file metadata to local storage
+                saveFileMetadata({
+                    id: Date.now(), // Generate a unique ID using timestamp
+                    name: file.name,
+                    size: formatFileSize(file.size),
+                    s3ObjectKey: signedUrlResponse.objectKey, // Save the S3 object key
+                    uploadDate: new Date().toISOString()
+                });
+                
+                // Reset the file input
+                fileInput.value = '';
+                
+                // Go to first page and re-render
+                currentPage = 1;
+                renderFiles();
+                renderPagination();
+                
+                // Show success message
+                alert(`File "${file.name}" uploaded successfully!`);
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                uploadError.textContent = `Upload failed: ${error.message}`;
+                uploadError.style.display = 'block';
+                
+            } finally {
+                // Reset button state
+                uploadButton.textContent = 'Upload File';
+                uploadButton.disabled = false;
+            }
+        }
+        
+        // Get a signed URL from the backend
+        async function getSignedUrl(file) {
+            // Prepare the request payload
+            const payload = {
+                fileName: file.name,
+                fileType: file.type
+            };
+            
+            // Make API call
+            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.getSignedUrl}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            // Check for HTTP errors
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            
+            // Map the backend response to our expected format
+            return {
+                url: data.uploadUrl,
+                objectKey: file.name // Backend uses fileName as the S3 key
+            };
+        }
+        
+        // Upload a file to S3 using the signed URL
+        async function uploadFileToS3(signedUrl, file) {
+            const response = await fetch(signedUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': file.type,
+                },
+                body: file
+            });
+            
+            if (!response.ok) {
+                console.log(response);
+                // response is in xml try to print that xml
+                const text = await response.text();
+
+                console.log(text);
+
+
+              
+                throw new Error(`S3 upload error: ${response.status}`);
+            }
+            
+            return response;
+        }
+        
+        // Save file metadata to local storage
+        function saveFileMetadata(fileData) {
+            const files = loadFilesFromStorage();
+            files.unshift(fileData); // Add to the beginning of the array
+            saveFilesToStorage(files);
+        }
+        
+        // Helper function to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        }
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
